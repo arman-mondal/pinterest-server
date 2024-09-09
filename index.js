@@ -5,6 +5,8 @@ const app = express();
 const cors = require('cors');
 const prisma = new PrismaClient()
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const uuid = require('uuid');
 app.use(express.json());
 const corsOptions = {
     origin: ["*"],
@@ -182,7 +184,7 @@ app.get('/test',async(req,res)=>{
 )
 app.post('/create-post', async (req, res) => {
     try {
-        const { title, content } = req.body;
+        const { title, content ,banner} = req.body;
         const tokenData=req.headers.authorization;
         const token=tokenData.split(' ')[1];
         const decoded=jwt.verify(token,'ArmanMondal');
@@ -207,6 +209,7 @@ app.post('/create-post', async (req, res) => {
             data: {
                 title,
                 content,
+                banner,
                 authorId: userId
             }
         });
@@ -233,9 +236,140 @@ app.get('/posts', async (req, res) => {
     }
 }
 );
+app.get('/posts/:id', async (req, res) => {
+    try {
+        const {id}=req.params;
+        const posts = await prisma.post.findMany({
+            where:{
+                id:parseInt(id)
 
+            },
+            include: {
+                author: true
+            }
 
+        });
+        if(posts.length===0){
+            return res.status(400).json({ error: 'Post not found' });
+        }
 
+        return res.json(posts[0]);
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ error: 'Something went wrong' });
+    }
+}
+);
+app.delete('/posts/:id', async (req, res) => {  
+    
+    try {
+        const {id}=req.params;
+        
+        const tokenData=req.headers.authorization;
+        const token=tokenData.split(' ')[1];
+        const decoded=jwt.verify(token,'ArmanMondal');
+        const userId=decoded.id;
+        if(!userId){
+            return res.status(400).json({ error: 'Please provide the user ID' });
+        }
+        const post = await prisma.post.findFirst({
+            where:{
+                id:parseInt(id),
+                authorId:userId
+            }
+        });
+        if(!post){
+            return res.status(400).json({ error: 'Post not found' });
+        }
+        await prisma.post.delete({
+            where:{
+                id:parseInt(id)
+            }
+        });
+        return res.json({ message: 'Post deleted successfully' });
+    } catch (error) {
+        return res.status(500).json({ error: 'Something went wrong' });
+    }
+}
+);
+app.put('/posts/:id', async (req, res) => { 
+    try{
+        const {id}=req.params;
+        const { title, content ,banner} = req.body;
+        const tokenData=req.headers.authorization;
+        const token=tokenData.split(' ')[1];
+        const decoded=jwt.verify(token,'ArmanMondal');
+        const userId=decoded.id;
+        if(!userId){
+            return res.status(400).json({ error: 'Please provide the user ID' });
+        }
+        const post = await prisma.post.findFirst({
+            where:{
+                id:parseInt(id),
+                authorId:userId
+            }
+        });
+        if(!post){
+            return res.status(400).json({ error: 'Post not found' });
+        }
+        await prisma.post.update({
+            where:{
+                id:parseInt(id)
+            },
+            data:{
+                title,
+                content,
+                banner
+            }
+        });
+        return res.json({ message: 'Post updated successfully' });
+    } catch (error) {
+        return res.status(500).json({ error: 'Something went wrong' });
+
+    }
+});
+app.use('/uploads',express.static('upload'));
+// Set up multer storage
+const uniqueId=uuid.v4();
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'upload'); // Replace with the actual path to your upload directory
+    },
+    filename: function (req, file, cb) {
+        const timestamp = Date.now();
+        const renamedFile = `${uniqueId}_${file.originalname}`;
+        cb(null, renamedFile);
+    }
+});
+
+// Create multer upload instance
+const upload = multer({ storage: storage });
+
+// Define the route for image uploading
+app.post('/upload', upload.single('image'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Please provide an image file' });
+        }
+
+        // Access the uploaded file details
+        const { originalname, size } = req.file;
+        const timestamp = Date.now();
+        const filename = `${uniqueId}_${originalname}`;
+
+        // Process the uploaded image as needed
+        // ...
+
+        // Generate the URL for the uploaded image
+        const imageUrl = `http://localhost:3004/uploads/${filename}`;
+
+        return res.json({ message: 'Image uploaded successfully', originalname, filename, size, imageUrl });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Something went wrong' });
+    }
+});
 
 
 

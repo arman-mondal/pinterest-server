@@ -38,6 +38,7 @@ model User {
 model Post {
     id        Int      @id @default(autoincrement())
     title     String
+    banner    String   @default("https://source.unsplash.com/random")
     content   String
     published Boolean  @default(false)
     author    User     @relation(fields: [authorId], references: [id])
