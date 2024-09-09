@@ -362,7 +362,7 @@ app.post('/upload', upload.single('image'), async (req, res) => {
         // ...
 
         // Generate the URL for the uploaded image
-        const imageUrl = `http://localhost:3004/uploads/${filename}`;
+        const imageUrl = `https://pinterest-server-6zsk.onrender.com/uploads/${filename}`;
 
         return res.json({ message: 'Image uploaded successfully', originalname, filename, size, imageUrl });
     } catch (error) {
