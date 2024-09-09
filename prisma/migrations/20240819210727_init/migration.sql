@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `User` MODIFY `token` VARCHAR(255) NOT NULL DEFAULT '';
