@@ -7,6 +7,10 @@ const prisma = new PrismaClient()
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const uuid = require('uuid');
+const fs = require('fs');
+const path = require('path');
+const { promisify } = require('util');
+const download = require('image-downloader');
 app.use(express.json());
 const corsOptions = {
     origin: ["*"],
@@ -21,6 +25,8 @@ app.use(function(req, res, next) {
     res.setHeader('Access-Control-Allow-Credentials', true);
     next();
   });
+const unlinkAsync = promisify(fs.unlink);
+
 app.post('/', async (req, res) => {
     try {
         const { url } = req.body;
@@ -34,7 +40,24 @@ app.post('/', async (req, res) => {
 
         if (match && match[1]) {
             const imageUrl = `https://i.${match[1]}`;
-            return res.json({ imageUrl });
+            const options = {
+                url: imageUrl,
+                dest: path.join(__dirname, 'upload', `${uuid.v4()}_${path.basename(imageUrl)}`)
+            };
+
+            const { filename } = await download.image(options);
+
+            // Schedule file deletion after 10 minutes
+            setTimeout(async () => {
+                try {
+                    await unlinkAsync(filename);
+                    console.log(`Deleted file: ${filename}`);
+                } catch (err) {
+                    console.error(`Error deleting file: ${filename}`, err);
+                }
+            }, 10 * 60 * 1000); // 10 minutes
+
+            return res.json({ imageUrl: `http://localhost:3004/uploads/${path.basename(filename)}` });
         } else {
             return res.status(400).json({ error: 'Please provide a valid URL' });
         }
@@ -43,7 +66,6 @@ app.post('/', async (req, res) => {
         return res.status(500).json({ error: 'Something went wrong' });
     }
 });
-
 
 app.post('/video', async (req, res) => {
     try {
@@ -57,8 +79,25 @@ app.post('/video', async (req, res) => {
         const match = response.data.match(regex);
 
         if (match && match[1]) {
-            const videoSrc = match[1];
-            return res.json({ videoSrc:videoSrc.replace("m3u8","mp4").replace("hls","720p") });
+            const videoSrc = match[1].replace("m3u8", "mp4").replace("hls", "720p");
+            const options = {
+                url: videoSrc,
+                dest: path.join(__dirname, 'upload', `${uuid.v4()}_${path.basename(videoSrc)}`)
+            };
+
+            const { filename } = await download.image(options);
+
+            // Schedule file deletion after 10 minutes
+            setTimeout(async () => {
+                try {
+                    await unlinkAsync(filename);
+                    console.log(`Deleted file: ${filename}`);
+                } catch (err) {
+                    console.error(`Error deleting file: ${filename}`, err);
+                }
+            }, 10 * 60 * 1000); // 10 minutes
+
+            return res.json({ videoSrc: `http://localhost:3004/uploads/${path.basename(filename)}` });
         } else {
             return res.status(400).json({ error: 'Please provide a valid URL' });
         }
