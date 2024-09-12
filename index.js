@@ -57,7 +57,7 @@ app.post('/', async (req, res) => {
                 }
             }, 10 * 60 * 1000); // 10 minutes
 
-            return res.json({ imageUrl: `http://localhost:3004/uploads/${path.basename(filename)}` });
+            return res.json({ imageUrl: `https://pinterest-server-6zsk.onrender.com/uploads/${path.basename(filename)}` });
         } else {
             return res.status(400).json({ error: 'Please provide a valid URL' });
         }
@@ -97,7 +97,7 @@ app.post('/video', async (req, res) => {
                 }
             }, 10 * 60 * 1000); // 10 minutes
 
-            return res.json({ videoSrc: `http://localhost:3004/uploads/${path.basename(filename)}` });
+            return res.json({ videoSrc: `https://pinterest-server-6zsk.onrender.com/uploads/${path.basename(filename)}` });
         } else {
             return res.status(400).json({ error: 'Please provide a valid URL' });
         }
